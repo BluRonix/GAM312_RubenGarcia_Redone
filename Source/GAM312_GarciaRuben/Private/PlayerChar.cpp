@@ -8,10 +8,20 @@ APlayerChar::APlayerChar()
 {
  	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
+
+	
 	PlayerCamComp = CreateDefaultSubobject<UCameraComponent>(TEXT("First Person Cam"));
+	
 	PlayerCamComp->SetupAttachment(GetMesh(), "head");
 
 	PlayerCamComp->bUsePawnControlRotation = true;
+
+
+	
+	ResourcesArray.SetNum(3);
+	ResourcesNameArray.Add(TEXT("Wood"));
+	ResourcesNameArray.Add(TEXT("Stone"));
+	ResourcesNameArray.Add(TEXT("Berry"));
 
 }
 
@@ -69,6 +79,47 @@ void APlayerChar::StopJump()
 
 void APlayerChar::FindObject()
 {
+
+	FHitResult HitResult;
+	FVector StartLocation = PlayerCamComp->GetComponentLocation();
+	FVector Direction = PlayerCamComp->GetForwardVector() * 800.0f;
+	FVector EndLocation = StartLocation + Direction;
+
+	FCollisionQueryParams QueryParams;
+	QueryParams.AddIgnoredActor(this);
+	QueryParams.bTraceComplex = true;
+	QueryParams.bReturnFaceIndex = true;
+
+	if (GetWorld()->LineTraceSingleByChannel(HitResult, StartLocation, EndLocation, ECC_Visibility, QueryParams))
+	{
+		AResource_M* HitResource = Cast<AResource_M>(HitResult.GetActor());
+
+		if (HitResource)
+		{
+
+			FString hitName = HitResource->resourceName;
+			int resourceValue = HitResource->resourceAmount;
+
+			HitResource->totalResource = HitResource->totalResource - resourceValue;
+
+			if (HitResource->totalResource > resourceValue)
+			{
+				GiveResource(resourceValue, hitName);
+
+				check(GEngine != nullptr);
+				GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Red, TEXT("Resource Collected"));
+
+			}
+			else 
+			{
+				HitResource->Destroy();
+				check(GEngine != nullptr);
+				GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Red, TEXT("Resource Depleted"));
+			}
+
+		}
+
+	}
 }
 
 void APlayerChar::SetHealth(float amount)
@@ -110,4 +161,23 @@ void APlayerChar::DecreaseStats()
 	}
 
 }
+
+void APlayerChar::GiveResource(float amount, FString resourceType)
+{
+
+		if (resourceType == "Wood")
+		{
+			ResourcesArray[0] = ResourcesArray[0] + amount;
+		}
+		if (resourceType == "Stone")
+		{
+			ResourcesArray[1] = ResourcesArray[1] + amount;
+
+		}
+		if (resourceType == "Berry")
+		{
+			ResourcesArray[2] = ResourcesArray[2] + amount;
+		}
+}
+
 
